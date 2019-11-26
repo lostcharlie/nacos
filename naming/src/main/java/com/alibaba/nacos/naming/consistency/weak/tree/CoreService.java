@@ -15,6 +15,7 @@
  */
 package com.alibaba.nacos.naming.consistency.weak.tree;
 
+import com.alibaba.fastjson.JSON;
 import com.alibaba.nacos.naming.consistency.ApplyAction;
 import com.alibaba.nacos.naming.consistency.Datum;
 import com.alibaba.nacos.naming.misc.Loggers;
@@ -24,6 +25,8 @@ import org.springframework.context.annotation.DependsOn;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * @author satjd
@@ -66,7 +69,7 @@ public class CoreService {
         subscriberManager.addTask(key, ApplyAction.CHANGE);
         // subscriberManager#processNow(key,ApplyAction.CHANGE);
 
-        transferService.transferNext(d,DatumType.UPDATE);
+        transferService.transferNext(d,DatumType.UPDATE, true);
         Loggers.TREE.info("data added/updated, key={}", d.key);
 
         // todo 4 检查ack位图，写成功的节点到一定阈值就返回成功
@@ -91,7 +94,7 @@ public class CoreService {
         subscriberManager.addTask(datum.key,ApplyAction.CHANGE);
         // subscriberManager#processNow(datum.key,ApplyAction.CHANGE);
 
-        transferService.transferNext(datum,DatumType.UPDATE,source);
+        transferService.transferNext(datum,DatumType.UPDATE,source, false);
 
         Loggers.TREE.info("data added/updated, key={}", datum.key);
     }
@@ -113,7 +116,7 @@ public class CoreService {
          subscriberManager.addTask(key,ApplyAction.DELETE);
         // subscriberManager#processNow(key,ApplyAction.DELETE);
 
-        transferService.transferNext(d,DatumType.DELETE);
+        transferService.transferNext(d,DatumType.DELETE, true);
 
         // todo 4 检查ack位图，写成功的节点到一定阈值就返回成功
 
@@ -139,9 +142,18 @@ public class CoreService {
          subscriberManager.addTask(datum.key,ApplyAction.DELETE);
         // subscriberManager#processNow(datum.key,ApplyAction.DELETE);
 
-        transferService.transferNext(datum,DatumType.DELETE,source);
+        transferService.transferNext(datum,DatumType.DELETE,source,false);
 
         Loggers.TREE.info("data deleted, key={}", datum.key);
+    }
+
+    public String generateMetricInfo() {
+        Map<String, String> metricsMap = new HashMap<>(32);
+        metricsMap.put("pendingTransferTasks",Integer.toString(transferService.getPendingTaskCnt()));
+
+        // todo add more metric
+
+        return JSON.toJSONString(metricsMap);
     }
 
     public boolean isInitialized() {
